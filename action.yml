@@ -1,0 +1,50 @@
+name: 'TypeDoc Report'
+description: 'Genera documentación en JSON usando TypeDoc y la publica en MonitoringTool-DB'
+author: 'ElJijuna'
+branding:
+  icon: 'book-open'
+  color: 'blue'
+inputs:
+  token:
+    description: 'Token para hacer push al repositorio destino (MonitoringTool-DB)'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: 📥 Clonar el repositorio
+      uses: actions/checkout@v3
+
+    - name: 📄 Generar documentación JSON con TypeDoc
+      shell: bash
+      run: npx typedoc --json ${{ github.event.repository.name }}--typedocs.json
+
+    - name: 📂 Verificar contenido del repo
+      shell: bash
+      run: ls -l
+
+    - name: 📦 Subir reporte
+      uses: actions/upload-artifact@v4
+      with:
+        name: typedoc-report
+        path: ${{ github.event.repository.name }}--typedocs.json
+
+    - name: 📥 Clonar MonitoringTool-DB
+      shell: bash
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git clone --depth 1 https://x-access-token:${{ inputs.token }}@github.com/${{ github.repository_owner }}/MonitoringTool-DB.git monitoring
+
+    - name: 📥 Descargar artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: typedoc-report
+        path: ./monitoring
+
+    - name: ✅ Commit & Push
+      shell: bash
+      run: |
+        cd monitoring
+        git add .
+        git commit -m "📚 Update typedoc report"
+        git push
